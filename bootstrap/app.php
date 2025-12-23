@@ -15,7 +15,7 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
-        // Konfigurasi middleware lainnya
+        $middleware->statefulApi(); // WAJIB ada untuk otentikasi SPA/React
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //

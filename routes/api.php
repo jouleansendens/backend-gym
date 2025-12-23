@@ -1,105 +1,100 @@
 <?php
 
-use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\FaqController;
-use App\Http\Controllers\ImageController;
+use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ContentController;
-use App\Http\Controllers\MessageController;
-use App\Http\Controllers\PricingController;
 use App\Http\Controllers\ServiceController;
-use App\Http\Controllers\Api\AdminController;
-use App\Http\Controllers\CertificateController;
-use App\Http\Controllers\LeaderboardController;
+use App\Http\Controllers\PricingController;
+use App\Http\Controllers\FaqController;
 use App\Http\Controllers\TestimonialController;
+use App\Http\Controllers\LeaderboardController;
+use App\Http\Controllers\MessageController;
+use App\Http\Controllers\CertificateController;
+use App\Http\Controllers\ImageController;
 use App\Http\Controllers\Admin\DashboardController;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Database\Schema\Blueprint;
 
-// Content Management
+Route::get('/fix-sanctum-table', function () {
+    if (!Schema::hasTable('personal_access_tokens')) {
+        Schema::create('personal_access_tokens', function (Blueprint $table) {
+            $table->id();
+            $table->morphs('tokenable');
+            $table->string('name');
+            $table->string('token', 64)->unique();
+            $table->text('abilities')->nullable();
+            $table->timestamp('last_used_at')->nullable();
+            $table->timestamp('expires_at')->nullable();
+            $table->timestamps();
+        });
+        return "Tabel personal_access_tokens berhasil dibuat!";
+    }
+    return "Tabel sudah ada.";
+});
+
+/*
+|--------------------------------------------------------------------------
+| API Routes - FITCOACH Backend
+|--------------------------------------------------------------------------
+*/
+
+// --- 1. PUBLIC ROUTES (Dapat diakses Frontend tanpa Login) ---
+
+// Authentication
+Route::post('/login', [AuthController::class, 'login']);
+
+// Landing Page Content
 Route::get('/content', [ContentController::class, 'index']);
-Route::put('/content', [ContentController::class, 'update']);
-Route::post('/content', [ContentController::class, 'store']); // Backward compatibility
-Route::get('/content/{key}', [ContentController::class, 'show']); // Backward compatibility
-Route::post('/reset', [ContentController::class, 'reset']);
+Route::get('/content/{key}', [ContentController::class, 'show']);
 
-// Resource Controllers
-Route::apiResource('services', ServiceController::class);
-Route::apiResource('pricing', PricingController::class);
-Route::apiResource('faqs', FaqController::class);
-Route::apiResource('testimonials', TestimonialController::class);
-Route::apiResource('leaderboard', LeaderboardController::class);
-Route::apiResource('messages', MessageController::class);
-Route::apiResource('certificates', CertificateController::class);
+// Public Data (Untuk ditampilkan di Website)
+Route::get('/services', [ServiceController::class, 'index']);
+Route::get('/pricing', [PricingController::class, 'index']);
+Route::get('/faqs', [FaqController::class, 'index']);
+Route::get('/testimonials', [TestimonialController::class, 'index']);
+Route::get('/leaderboard', [LeaderboardController::class, 'index']);
+Route::get('/certificates', [CertificateController::class, 'index']);
 
-// Message specific routes
-Route::put('/messages/{id}/read', [MessageController::class, 'markAsRead']);
+// Submit Contact Form
+Route::post('/messages', [MessageController::class, 'store']);
 
-// Image routes
-Route::get('/images', [ImageController::class, 'index']);
-Route::put('/images', [ImageController::class, 'update']);
-Route::delete('/images/{id}', [ImageController::class, 'destroy']);
 
-Route::post('/login', function (Request $request) {
-    $credentials = $request->validate([
-        'email' => 'required|email',
-        'password' => 'required'
-    ]);
+// --- 2. PROTECTED ROUTES (Hanya Admin - Memerlukan Token) ---
 
-    $user = User::where('email', $credentials['email'])->first();
+Route::middleware('auth:sanctum')->group(function () {
+    
+    // Auth Check (Digunakan oleh AuthContext.tsx di React)
+    Route::get('/check-auth', function (Request $request) {
+        return response()->json(['authenticated' => true, 'user' => $request->user()]);
+    });
 
-    if (!$user || !Hash::check($credentials['password'], $user->password)) {
-        return response()->json(['message' => 'Invalid credentials'], 401);
-    }
+    // Dashboard Statistics
+    Route::get('/admin/dashboard-stats', [DashboardController::class, 'getStats']);
 
-    return response()->json([
-        'status' => 'success',
-        'user' => $user
-    ]);
+    // Admin Profile Management
+    Route::put('/admin/update-profile', [AuthController::class, 'updateProfile']);
+
+    // Site Content Management (Edit Landing Page)
+    Route::put('/content', [ContentController::class, 'update']);
+    Route::post('/content', [ContentController::class, 'store']);
+    Route::post('/reset', [ContentController::class, 'reset']);
+
+    // Admin Resource CRUD (Create, Update, Delete)
+    Route::apiResource('services', ServiceController::class)->except(['index']);
+    Route::apiResource('pricing', PricingController::class)->except(['index']);
+    Route::apiResource('faqs', FaqController::class)->except(['index']);
+    Route::apiResource('testimonials', TestimonialController::class)->except(['index']);
+    Route::apiResource('leaderboard', LeaderboardController::class)->except(['index']);
+    Route::apiResource('messages', MessageController::class)->except(['index', 'store']);
+    Route::apiResource('certificates', CertificateController::class)->except(['index']);
+
+    // Inbox Management
+    Route::get('/messages', [MessageController::class, 'index']);
+    Route::put('/messages/{id}/read', [MessageController::class, 'markAsRead']);
+
+    // Image & Gallery Management
+    Route::get('/images', [ImageController::class, 'index']);
+    Route::put('/images', [ImageController::class, 'update']);
+    Route::delete('/images/{id}', [ImageController::class, 'destroy']);
 });
-
-Route::put('/admin/update-profile', function (Request $request) {
-    $validated = $request->validate([
-        'name' => 'sometimes|string|max:255',
-        'email' => 'sometimes|email|unique:users,email,' . ($request->user_id ?? 1),
-        'current_password' => 'required_with:new_password|string',
-        'new_password' => 'sometimes|string|min:8|confirmed',
-    ]);
-
-    // Ambil user (sesuaikan dengan auth system Anda)
-    $user = User::find($request->user_id ?? 1);
-
-    if (!$user) {
-        return response()->json(['message' => 'User not found'], 404);
-    }
-
-    // Verify current password jika ada new_password
-    if ($request->filled('new_password')) {
-        if (!Hash::check($request->current_password, $user->password)) {
-            return response()->json([
-                'message' => 'Current password is incorrect'
-            ], 422);
-        }
-        $user->password = Hash::make($request->new_password);
-    }
-
-    // Update name dan email jika ada
-    if ($request->filled('name')) {
-        $user->name = $request->name;
-    }
-    if ($request->filled('email')) {
-        $user->email = $request->email;
-    }
-
-    $user->save();
-
-    return response()->json([
-        'status' => 'success',
-        'message' => 'Profile updated successfully',
-        'user' => $user
-    ]);
-});
-
-Route::post('/login', [AdminController::class, 'login']);
-Route::put('/admin/update-profile', [AdminController::class, 'updateProfile']);
-Route::middleware('auth:sanctum')->get('/admin/dashboard-stats', [DashboardController::class, 'getStats']);
