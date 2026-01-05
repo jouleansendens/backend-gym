@@ -22,6 +22,10 @@ return [
     'allowed_origins' => [
         'https://trainwithbraden.com',
         'https://www.trainwithbraden.com',
+        'http://localhost:3000',   // ✅ Untuk Vite dev
+        'http://localhost:5173',   // ✅ Untuk Vite default port
+        'http://127.0.0.1:3000',
+        'http://127.0.0.1:5173',
     ],
 
     'allowed_origins_patterns' => [],

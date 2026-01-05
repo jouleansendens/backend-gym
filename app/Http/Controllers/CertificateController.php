@@ -24,6 +24,16 @@ class CertificateController extends Controller
         ], 201);
     }
 
+    public function update(Request $request, $id)
+    {
+        $certificate = Certificate::findOrFail($id);
+        $certificate->update($request->all());
+        return response()->json([
+            'status' => 'success',
+            'data' => $certificate
+        ]);
+    }
+
     public function destroy($id)
     {
         Certificate::findOrFail($id)->delete();
