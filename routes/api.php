@@ -16,6 +16,10 @@ use App\Http\Controllers\Admin\DashboardController;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Database\Schema\Blueprint;
 
+Route::get('/sitemap.xml', function () {
+    return response()->view('sitemap')->header('Content-Type', 'text/xml');
+});
+
 Route::get('/fix-sanctum-table', function () {
     if (!Schema::hasTable('personal_access_tokens')) {
         Schema::create('personal_access_tokens', function (Blueprint $table) {
