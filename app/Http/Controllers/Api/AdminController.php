@@ -70,8 +70,13 @@ class AdminController extends Controller
             ], 401);
         }
 
+        // Buat token untuk autentikasi
+        $token = $user->createToken('auth_token')->plainTextToken;
+
         return response()->json([
             'status' => 'success',
+            'access_token' => $token,
+            'token_type' => 'Bearer',
             'user' => [
                 'id' => $user->id,
                 'name' => $user->name,
