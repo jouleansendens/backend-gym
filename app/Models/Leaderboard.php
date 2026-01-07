@@ -8,7 +8,7 @@ class Leaderboard extends Model
 {
     protected $table = 'leaderboard';
     
-    protected $fillable = ['name', 'steps'];
+    protected $fillable = ['name', 'steps', 'image'];
     
     protected $casts = [
         'steps' => 'integer',

@@ -9,9 +9,11 @@ class TestimonialController extends Controller
 {
     public function index()
     {
+        // ✅ Return ALL testimonials for admin panel (termasuk hidden)
+        // Frontend yang akan filter mana yang visible
         return response()->json([
             'status' => 'success',
-            'data' => Testimonial::where('is_active', true)->get()
+            'data' => Testimonial::orderBy('created_at', 'desc')->get()
         ]);
     }
 
@@ -27,7 +29,15 @@ class TestimonialController extends Controller
     public function update(Request $request, $id)
     {
         $testimonial = Testimonial::findOrFail($id);
-        $testimonial->update($request->all());
+        
+        // ✅ Ensure is_active is handled properly (convert true/false to 1/0)
+        $data = $request->all();
+        if (isset($data['is_active'])) {
+            $data['is_active'] = $data['is_active'] ? 1 : 0;
+        }
+        
+        $testimonial->update($data);
+        
         return response()->json([
             'status' => 'success',
             'data' => $testimonial
