@@ -10,10 +10,10 @@ class TestimonialController extends Controller
     public function index()
     {
         // ✅ Return ALL testimonials for admin panel (termasuk hidden)
-        // Frontend yang akan filter mana yang visible
+        // Explicitly select * to avoid any scope issues
         return response()->json([
             'status' => 'success',
-            'data' => Testimonial::orderBy('created_at', 'desc')->get()
+            'data' => Testimonial::query()->select('*')->orderBy('created_at', 'desc')->get()
         ]);
     }
 

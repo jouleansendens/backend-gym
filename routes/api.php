@@ -89,7 +89,15 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('pricing', PricingController::class)->except(['index']);
     Route::apiResource('faqs', FaqController::class)->except(['index']);
     Route::apiResource('testimonials', TestimonialController::class)->except(['index']);
-    Route::apiResource('leaderboard', LeaderboardController::class)->except(['index']);
+    Route::apiResource('testimonials', TestimonialController::class)->except(['index']);
+    
+    // Explicit Leaderboard Routes (Fix for Shared Hosting PUT blocking)
+    Route::post('/leaderboard', [LeaderboardController::class, 'store']);
+    Route::put('/leaderboard/{id}', [LeaderboardController::class, 'update']);
+    Route::post('/leaderboard/{id}', [LeaderboardController::class, 'update']); // POST fallback
+    Route::delete('/leaderboard/{id}', [LeaderboardController::class, 'destroy']);
+    Route::get('/leaderboard', [LeaderboardController::class, 'index']); // Fallback if apiResource fails
+    
     Route::apiResource('messages', MessageController::class)->except(['index', 'store']);
     Route::apiResource('certificates', CertificateController::class)->except(['index']);
 

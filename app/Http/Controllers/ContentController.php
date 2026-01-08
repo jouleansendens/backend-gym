@@ -36,23 +36,45 @@ class ContentController extends Controller
         ]);
     }
 
-    /**
-     * PUT /api/content - Update single content key
-     */
     public function update(Request $request)
     {
         $key = $request->input('key');
         $value = $request->input('value');
+        
+        // Handle null/empty values - convert to empty string to prevent NULL constraint error
+        if ($value === null || $value === '') {
+            $finalValue = '';
+        } else {
+            // Force value to be string if not array
+            $finalValue = is_array($value) ? json_encode($value) : (string)$value;
+        }
 
-        SiteSetting::updateOrCreate(
-            ['key' => $key],
-            ['value' => is_array($value) ? json_encode($value) : $value]
-        );
+        try {
+            // Explicitly check for existence to debug persistence issues
+            $setting = SiteSetting::where('key', $key)->first();
+            
+            if ($setting) {
+                $setting->value = $finalValue;
+                $setting->save();
+            } else {
+                SiteSetting::create([
+                    'key' => $key,
+                    'value' => $finalValue
+                ]);
+            }
 
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Content updated successfully'
-        ]);
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Content updated successfully',
+                'saved_key' => $key,
+                'saved_value' => $finalValue
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to save content: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     /**
