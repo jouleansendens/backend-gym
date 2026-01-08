@@ -96,7 +96,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/leaderboard/{id}', [LeaderboardController::class, 'update']);
     Route::post('/leaderboard/{id}', [LeaderboardController::class, 'update']); // POST fallback
     Route::delete('/leaderboard/{id}', [LeaderboardController::class, 'destroy']);
-    Route::get('/leaderboard', [LeaderboardController::class, 'index']); // Fallback if apiResource fails
+    Route::delete('/leaderboard/{id}', [LeaderboardController::class, 'destroy']);
+    // Route::get('/leaderboard', [LeaderboardController::class, 'index']); // REMOVED: Already defined in public routes
     
     Route::apiResource('messages', MessageController::class)->except(['index', 'store']);
     Route::apiResource('certificates', CertificateController::class)->except(['index']);
